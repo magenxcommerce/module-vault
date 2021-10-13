@@ -3,8 +3,6 @@
  * Copyright © Magento, Inc. All rights reserved.
  * See COPYING.txt for license details.
  */
-declare(strict_types=1);
-
 namespace Magento\Vault\Test\Unit\Observer;
 
 use Magento\Framework\App\DeploymentConfig;
@@ -12,19 +10,15 @@ use Magento\Framework\Encryption\Encryptor;
 use Magento\Framework\Event\Observer;
 use Magento\Framework\Math\Random;
 use Magento\Sales\Api\Data\OrderPaymentExtension;
+use Magento\Sales\Api\Data\OrderPaymentExtensionFactory;
 use Magento\Sales\Model\Order;
 use Magento\Sales\Model\Order\Payment;
 use Magento\Vault\Model\PaymentToken;
 use Magento\Vault\Model\PaymentTokenManagement;
-use Magento\Vault\Model\Ui\VaultConfigProvider;
 use Magento\Vault\Observer\AfterPaymentSaveObserver;
-use PHPUnit\Framework\MockObject\MockObject;
-use PHPUnit\Framework\TestCase;
+use PHPUnit_Framework_MockObject_MockObject as MockObject;
 
-/**
- * Test for payment observer.
- */
-class AfterPaymentSaveObserverTest extends TestCase
+class AfterPaymentSaveObserverTest extends \PHPUnit\Framework\TestCase
 {
     /**
      * @var \Magento\Framework\Event\Observer|MockObject
@@ -32,27 +26,27 @@ class AfterPaymentSaveObserverTest extends TestCase
     protected $eventObserverArgMock;
 
     /**
-     * @var AfterPaymentSaveObserver
+     * @var \Magento\Vault\Observer\AfterPaymentSaveObserver
      */
     protected $observer;
 
     /**
-     * @var Encryptor
+     * @var \Magento\Framework\Encryption\Encryptor
      */
     protected $encryptorModel;
 
     /**
-     * @var OrderPaymentExtension|MockObject paymentExtension
+     * @var \Magento\Sales\Api\Data\OrderPaymentExtension|MockObject paymentExtension
      */
     protected $paymentExtension;
 
     /**
-     * @var PaymentTokenManagement|MockObject paymentTokenManagementMock
+     * @var \Magento\Vault\Model\PaymentTokenManagement|MockObject paymentTokenManagementMock
      */
     protected $paymentTokenManagementMock;
 
     /**
-     * @var PaymentToken|MockObject paymentTokenMock
+     * @var \Magento\Vault\Model\PaymentToken|MockObject paymentTokenMock
      */
     protected $paymentTokenMock;
 
@@ -67,18 +61,14 @@ class AfterPaymentSaveObserverTest extends TestCase
     protected $salesOrderPaymentMock;
 
     /**
-     * @inheritdoc
+     * @return void
      */
-    protected function setUp(): void
+    protected function setUp()
     {
         /** @var Random|MockObject $encryptorRandomGenerator */
         $encryptorRandomGenerator = $this->createMock(Random::class);
         /** @var DeploymentConfig|MockObject $deploymentConfigMock */
         $deploymentConfigMock = $this->createMock(DeploymentConfig::class);
-        $deploymentConfigMock->expects($this->any())
-            ->method('get')
-            ->with(Encryptor::PARAM_CRYPT_KEY)
-            ->willReturn('g9mY9KLrcuAVJfsmVUSRkKFLDdUPVkaZ');
         $this->encryptorModel = new Encryptor($encryptorRandomGenerator, $deploymentConfigMock);
 
         $this->paymentExtension = $this->getMockBuilder(OrderPaymentExtension::class)
@@ -103,7 +93,7 @@ class AfterPaymentSaveObserverTest extends TestCase
 
         // Sales Order Payment Model
         $this->salesOrderPaymentMock = $this->getMockBuilder(Payment::class)
-            ->setMethods(['getAdditionalInformation'])
+            ->setMethods(null)
             ->disableOriginalConstructor()
             ->getMock();
         $this->salesOrderPaymentMock->setOrder($this->salesOrderMock);
@@ -127,17 +117,14 @@ class AfterPaymentSaveObserverTest extends TestCase
     }
 
     /**
-     * Case when payment successfully made.
-     *
      * @param int $customerId
      * @param string $createdAt
      * @param string $token
      * @param bool $isActive
      * @param string $method
-     * @param array $additionalInfo
      * @dataProvider positiveCaseDataProvider
      */
-    public function testPositiveCase($customerId, $createdAt, $token, $isActive, $method, $additionalInfo)
+    public function testPositiveCase($customerId, $createdAt, $token, $isActive, $method)
     {
         $this->paymentTokenMock->setGatewayToken($token);
         $this->paymentTokenMock->setCustomerId($customerId);
@@ -148,8 +135,6 @@ class AfterPaymentSaveObserverTest extends TestCase
         $this->paymentExtension->expects($this->exactly(2))
             ->method('getVaultPaymentToken')
             ->willReturn($this->paymentTokenMock);
-
-        $this->salesOrderPaymentMock->method('getAdditionalInformation')->willReturn($additionalInfo);
 
         if (!empty($token)) {
             $this->paymentTokenManagementMock->expects($this->once())
@@ -173,15 +158,9 @@ class AfterPaymentSaveObserverTest extends TestCase
         static::assertEquals($token, $paymentToken->getGatewayToken());
         static::assertEquals($isActive, $paymentToken->getIsActive());
         static::assertEquals($createdAt, $paymentToken->getCreatedAt());
-        static::assertEquals(
-            $additionalInfo[VaultConfigProvider::IS_ACTIVE_CODE] ?? false,
-            $paymentToken->getIsVisible()
-        );
     }
 
     /**
-     * Data for positiveCase test.
-     *
      * @return array
      */
     public function positiveCaseDataProvider()
@@ -192,32 +171,14 @@ class AfterPaymentSaveObserverTest extends TestCase
                 '10\20\2015',
                 'asdfg',
                 true,
-                'paypal',
-                [],
-            ],
-            [
-                1,
-                '10\20\2015',
-                'asdfg',
-                true,
-                'paypal',
-                [VaultConfigProvider::IS_ACTIVE_CODE => true],
-            ],
-            [
-                1,
-                '10\20\2015',
-                'asdfg',
-                true,
-                'paypal',
-                [VaultConfigProvider::IS_ACTIVE_CODE => false],
+                'paypal'
             ],
             [
                 null,
                 null,
                 null,
                 false,
-                null,
-                [],
+                null
             ],
         ];
     }
